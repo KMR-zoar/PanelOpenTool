@@ -327,6 +327,7 @@ function addText() {
     originX: "center",
     originY: "center",
     fontSize: fSize,
+    fontFamily: '"M PLUS Rounded 1c", sans-serif',
     fill: "#ffffff",
     fontWeight: "bold",
     stroke: "#000000",

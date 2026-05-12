@@ -13,12 +13,14 @@
 }
 
 body {
-  font-family: "Helvetica Neue", Arial, sans-serif;
+  /* フォント指定を M PLUS Rounded 1c に変更 */
+  font-family: "M PLUS Rounded 1c", "Helvetica Neue", Arial, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  /* 100vh を 100dvh に変更 (スマホの動的バーに対応) */
+  height: 100dvh;
   overflow: hidden;
   --current-theme: var(--primary-create);
 }
@@ -31,7 +33,11 @@ body.mode-open {
 header {
   background: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
 }
 
 .tabs {
@@ -66,6 +72,7 @@ header {
 
 /* ツールバー */
 .toolbar {
+  margin-top: 45px;
   display: flex;
   gap: 8px;
   padding: 10px;
