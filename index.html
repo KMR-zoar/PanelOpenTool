@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>パネル開け支援ツール</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="mode-create" id="appBody">
+
+  <header>
+    <div class="tabs">
+      <div class="tab active" id="tabCreate" onclick="switchMode('create')">✏️ 作成モード</div>
+      <div class="tab" id="tabOpen" onclick="switchMode('open')">🔓 オープンモード</div>
+    </div>
+  </header>
+
+  <!-- 作成モード -->
+  <div class="toolbar show-create">
+    <div class="btn btn-file">画像読込<input type="file" accept="image/*" id="imageUpload"></div>
+    <button class="btn" onclick="addText()">文字追加</button>
+    <button class="btn" id="btnDeleteText" style="display:none; background:#ef4444;" onclick="deleteSelectedText()">🗑️ 文字削除</button>
+    <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 4px;"></div>
+    <button class="btn" onclick="undoSplit()">戻る</button>
+    <button class="btn" onclick="resetPanels()">全消去</button>
+    <button class="btn" onclick="changeTheme()">色変更</button>
+  </div>
+
+  <!-- オープンモード -->
+  <div class="toolbar show-open">
+    <div style="flex:1; font-size: 14px;">パネルをタップして開閉</div>
+    <button class="btn" onclick="downloadImage()">💾 画像保存</button>
+    <button class="btn" style="background:#000;" onclick="postToX()">𝕏 でポスト</button>
+  </div>
+
+  <div class="canvas-wrapper" id="canvasWrapper">
+    <div class="placeholder-text" id="placeholder">上の「画像読込」からスタート</div>
+    <canvas id="mainCanvas"></canvas>
+  </div>
+
+  <footer>
+    <a href="https://doneru.jp/aoz" class="support-link">開発支援(Doneru)</a>
+    <div></div> <!-- スペーサー -->
+    <button class="settings-btn" onclick="openSettings()">𝕏定型文設定</button>
+  </footer>
+
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>𝕏 (Twitter) 定型文設定</h2>
+      <textarea id="xText" placeholder="例: パネル開けチャレンジ！ #VTuber"></textarea>
+      <div class="modal-actions">
+        <button class="modal-btn btn-cancel" onclick="closeSettings()">キャンセル</button>
+        <button class="modal-btn btn-save" onclick="saveSettings()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+
+</body>
+</html>
