@@ -28,6 +28,12 @@ window.onload = () => {
     document.getElementById("btnDeleteText").style.display = "none";
   });
 
+  canvas.on("text:editing:exited", () => {
+    // 文字の編集が終わったら、強制的にスクロールを一番上に戻す
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+  });
+
   if (localStorage.getItem("xTemplate")) {
     document.getElementById("xText").value = localStorage.getItem("xTemplate");
   }
