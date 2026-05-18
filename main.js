@@ -1,4 +1,7 @@
-let canvas, drawLine, isDrawing = false, startPoint;
+let canvas,
+  drawLine,
+  isDrawing = false,
+  startPoint;
 let currentMode = "create";
 let splitHistory = [];
 let isImageLoaded = false;
@@ -60,16 +63,23 @@ function fitCanvasToScreen() {
   const cssH = logH * ratio;
 
   // cssOnly: true を指定して、内部の高画質は維持したまま見た目のサイズだけを縮小する
-  canvas.setDimensions({
-    width: cssW + "px",
-    height: cssH + "px"
-  }, { cssOnly: true });
+  canvas.setDimensions(
+    {
+      width: cssW + "px",
+      height: cssH + "px",
+    },
+    { cssOnly: true },
+  );
 
   canvas.renderAll();
 }
 
 function checkSelection(e) {
-  if (currentMode === "create" && e.selected && e.selected[0].type === "textbox") {
+  if (
+    currentMode === "create" &&
+    e.selected &&
+    e.selected[0].type === "textbox"
+  ) {
     document.getElementById("btnDeleteText").style.display = "inline-flex";
   }
 }
@@ -86,13 +96,17 @@ function deleteSelectedText() {
 document.getElementById("imageUpload").addEventListener("change", function (e) {
   const file = e.target.files[0];
   if (!file) return;
+  alert(
+    "【お知らせ】\n端末の負荷を軽減するため、編集中は画面サイズに合わせて表示されます。\n画像保存時には「長辺1500pxの高画質」で出力されます！\n\n※企画終了後、全て開いた際は元のファイルを投稿してください！",
+  );
 
   const reader = new FileReader();
   reader.onload = function (f) {
     fabric.Image.fromURL(f.target.result, function (img) {
       // 内部解像度は高画質(最大1500px)で固定する
       const MAX_LOGICAL = 1500;
-      let logW = img.width, logH = img.height;
+      let logW = img.width,
+        logH = img.height;
       if (logW > MAX_LOGICAL || logH > MAX_LOGICAL) {
         const ratio = Math.min(MAX_LOGICAL / logW, MAX_LOGICAL / logH);
         logW = logW * ratio;
@@ -123,9 +137,15 @@ function createPolygon(points) {
   // 内部解像度に対する相対的な太さに調整（見た目5px相当）
   const sWidth = Math.max(5, Math.floor(canvas.getWidth() * 0.015));
   return new fabric.Polygon(points, {
-    fill: theme.fill, stroke: theme.stroke, strokeWidth: sWidth, opacity: op,
-    selectable: false, evented: true, objectCaching: false,
-    originX: "left", originY: "top",
+    fill: theme.fill,
+    stroke: theme.stroke,
+    strokeWidth: sWidth,
+    opacity: op,
+    selectable: false,
+    evented: true,
+    objectCaching: false,
+    originX: "left",
+    originY: "top",
   });
 }
 
@@ -134,8 +154,14 @@ function resetPanels() {
   canvas.getObjects("polygon").forEach((obj) => canvas.remove(obj));
   canvas.getObjects("textbox").forEach((obj) => canvas.remove(obj));
   splitHistory = [];
-  const w = canvas.getWidth(), h = canvas.getHeight();
-  const p = createPolygon([{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }]);
+  const w = canvas.getWidth(),
+    h = canvas.getHeight();
+  const p = createPolygon([
+    { x: 0, y: 0 },
+    { x: w, y: 0 },
+    { x: w, y: h },
+    { x: 0, y: h },
+  ]);
   canvas.add(p);
   canvas.sendToBack(p);
   canvas.renderAll();
@@ -146,14 +172,19 @@ function onMouseDown(o) {
   if (!isImageLoaded) return;
 
   if (currentMode === "create") {
-    if (canvas.getActiveObject() && canvas.getActiveObject().type === "textbox") return;
+    if (canvas.getActiveObject() && canvas.getActiveObject().type === "textbox")
+      return;
     isDrawing = true;
     const pointer = canvas.getPointer(o.e);
     startPoint = { x: pointer.x, y: pointer.y };
 
     const sWidth = Math.max(5, Math.floor(canvas.getWidth() * 0.015));
     drawLine = new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
-      stroke: "#ff0000", strokeWidth: sWidth, strokeDashArray: [sWidth, sWidth], selectable: false, evented: false,
+      stroke: "#ff0000",
+      strokeWidth: sWidth,
+      strokeDashArray: [sWidth, sWidth],
+      selectable: false,
+      evented: false,
     });
     canvas.add(drawLine);
   } else if (currentMode === "open") {
@@ -173,7 +204,9 @@ function onMouseDown(o) {
       clickedPolygon.set({ opacity: isOpening ? 0 : 1.0 });
 
       if (clickedPolygon.attachedTexts) {
-        clickedPolygon.attachedTexts.forEach((t) => t.set({ visible: !isOpening }));
+        clickedPolygon.attachedTexts.forEach((t) =>
+          t.set({ visible: !isOpening }),
+        );
       }
       canvas.renderAll();
       saveWorkspace();
@@ -211,7 +244,8 @@ function processSplit(p1, p2) {
     const pts = poly.points;
     if (isPointInPolygon(p1, pts) || isPointInPolygon(p2, pts)) return true;
     for (let i = 0; i < pts.length; i++) {
-      if (doLineSegmentsIntersect(p1, p2, pts[i], pts[(i + 1) % pts.length])) return true;
+      if (doLineSegmentsIntersect(p1, p2, pts[i], pts[(i + 1) % pts.length]))
+        return true;
     }
     return false;
   }
@@ -238,31 +272,44 @@ function processSplit(p1, p2) {
 }
 
 function doLineSegmentsIntersect(p1, p2, q1, q2) {
-  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  const cp1 = cross(p1, p2, q1), cp2 = cross(p1, p2, q2);
-  const cp3 = cross(q1, q2, p1), cp4 = cross(q1, q2, p2);
+  const cross = (a, b, c) =>
+    (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const cp1 = cross(p1, p2, q1),
+    cp2 = cross(p1, p2, q2);
+  const cp3 = cross(q1, q2, p1),
+    cp4 = cross(q1, q2, p2);
   return cp1 * cp2 < 0 && cp3 * cp4 < 0;
 }
 
 function splitPolygonByLine(vertices, p1, p2) {
-  const a = p2.y - p1.y, b = p1.x - p2.x, c = p2.x * p1.y - p1.x * p2.y;
-  const poly1 = [], poly2 = [];
+  const a = p2.y - p1.y,
+    b = p1.x - p2.x,
+    c = p2.x * p1.y - p1.x * p2.y;
+  const poly1 = [],
+    poly2 = [];
   const getSide = (p) => {
     const val = a * p.x + b * p.y + c;
     return Math.abs(val) < 1e-4 ? 0 : val > 0 ? 1 : -1;
   };
 
   for (let i = 0; i < vertices.length; i++) {
-    const curr = vertices[i], next = vertices[(i + 1) % vertices.length];
-    const currSide = getSide(curr), nextSide = getSide(next);
+    const curr = vertices[i],
+      next = vertices[(i + 1) % vertices.length];
+    const currSide = getSide(curr),
+      nextSide = getSide(next);
     if (currSide >= 0) poly1.push(curr);
     if (currSide <= 0) poly2.push(curr);
 
     if (currSide * nextSide < 0) {
-      const a2 = next.y - curr.y, b2 = curr.x - next.x, c2 = next.x * curr.y - curr.x * next.y;
+      const a2 = next.y - curr.y,
+        b2 = curr.x - next.x,
+        c2 = next.x * curr.y - curr.x * next.y;
       const det = a * b2 - a2 * b;
       if (det !== 0) {
-        const intersection = { x: (b * c2 - b2 * c) / det, y: (a2 * c - a * c2) / det };
+        const intersection = {
+          x: (b * c2 - b2 * c) / det,
+          y: (a2 * c - a * c2) / det,
+        };
         poly1.push(intersection);
         poly2.push(intersection);
       }
@@ -273,9 +320,12 @@ function splitPolygonByLine(vertices, p1, p2) {
 }
 
 function isPointInPolygon(point, vs) {
-  let x = point.x, y = point.y, inside = false;
+  let x = point.x,
+    y = point.y,
+    inside = false;
   for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-    let intersect = vs[i].y > y != vs[j].y > y &&
+    let intersect =
+      vs[i].y > y != vs[j].y > y &&
       x < ((vs[j].x - vs[i].x) * (y - vs[i].y)) / (vs[j].y - vs[i].y) + vs[i].x;
     if (intersect) inside = !inside;
   }
@@ -283,7 +333,9 @@ function isPointInPolygon(point, vs) {
 }
 
 function saveHistory() {
-  const state = canvas.getObjects("polygon").map((p) => p.points.map((pt) => ({ x: pt.x, y: pt.y })));
+  const state = canvas
+    .getObjects("polygon")
+    .map((p) => p.points.map((pt) => ({ x: pt.x, y: pt.y })));
   splitHistory.push(state);
 }
 
@@ -307,12 +359,20 @@ function addText() {
   const tStroke = Math.max(2, Math.floor(canvas.getWidth() * 0.005));
 
   const text = new fabric.Textbox("テキスト", {
-    left: canvas.getWidth() / 2, top: canvas.getHeight() / 2,
-    originX: "center", originY: "center",
-    fontSize: fSize, fontFamily: '"M PLUS Rounded 1c", sans-serif',
-    fill: "#ffffff", fontWeight: "bold",
-    stroke: "#000000", strokeWidth: tStroke, paintFirst: "stroke",
-    cornerColor: "#2563eb", cornerSize: 12, transparentCorners: false,
+    left: canvas.getWidth() / 2,
+    top: canvas.getHeight() / 2,
+    originX: "center",
+    originY: "center",
+    fontSize: fSize,
+    fontFamily: '"M PLUS Rounded 1c", sans-serif',
+    fill: "#ffffff",
+    fontWeight: "bold",
+    stroke: "#000000",
+    strokeWidth: tStroke,
+    paintFirst: "stroke",
+    cornerColor: "#2563eb",
+    cornerSize: 12,
+    transparentCorners: false,
   });
   canvas.add(text);
   canvas.setActiveObject(text);
@@ -322,7 +382,9 @@ function addText() {
 function changeTheme() {
   currentThemeIndex = (currentThemeIndex + 1) % THEMES.length;
   const theme = THEMES[currentThemeIndex];
-  canvas.getObjects("polygon").forEach((p) => p.set({ fill: theme.fill, stroke: theme.stroke }));
+  canvas
+    .getObjects("polygon")
+    .forEach((p) => p.set({ fill: theme.fill, stroke: theme.stroke }));
   canvas.renderAll();
   saveWorkspace();
 }
@@ -331,9 +393,16 @@ function switchMode(mode, skipConfirm = false) {
   if (mode === currentMode || !isImageLoaded) return;
 
   if (mode === "create") {
-    const openPanels = canvas.getObjects("polygon").filter((p) => p.opacity === 0);
+    const openPanels = canvas
+      .getObjects("polygon")
+      .filter((p) => p.opacity === 0);
     if (openPanels.length > 0 && !skipConfirm) {
-      if (!confirm("作成モードに戻ると、開いているパネルが全て閉じられます。よろしいですか？")) return;
+      if (
+        !confirm(
+          "作成モードに戻ると、開いているパネルが全て閉じられます。よろしいですか？",
+        )
+      )
+        return;
     }
     currentMode = "create";
     document.body.className = "mode-create";
@@ -341,9 +410,11 @@ function switchMode(mode, skipConfirm = false) {
     document.getElementById("tabOpen").classList.remove("active");
 
     canvas.getObjects("polygon").forEach((p) => p.set({ opacity: 0.6 }));
-    canvas.getObjects("textbox").forEach((t) =>
-      t.set({ selectable: true, evented: true, visible: true }),
-    );
+    canvas
+      .getObjects("textbox")
+      .forEach((t) =>
+        t.set({ selectable: true, evented: true, visible: true }),
+      );
   } else {
     currentMode = "open";
     document.body.className = "mode-open";
@@ -377,7 +448,9 @@ function saveWorkspace() {
   if (!isImageLoaded) return;
   try {
     const bgImage = canvas.backgroundImage;
-    const bgSrc = bgImage ? bgImage.toDataURL({ format: "jpeg", quality: 0.8 }) : null;
+    const bgSrc = bgImage
+      ? bgImage.toDataURL({ format: "jpeg", quality: 0.8 })
+      : null;
 
     const state = {
       width: canvas.getWidth(), // 高画質論理サイズ
@@ -386,11 +459,17 @@ function saveWorkspace() {
       mode: currentMode,
       themeIndex: currentThemeIndex,
       polygons: canvas.getObjects("polygon").map((p) => ({
-        points: p.points, opacity: p.opacity,
+        points: p.points,
+        opacity: p.opacity,
       })),
       texts: canvas.getObjects("textbox").map((t) => ({
-        text: t.text, left: t.left, top: t.top,
-        angle: t.angle, scaleX: t.scaleX, scaleY: t.scaleY, visible: t.visible,
+        text: t.text,
+        left: t.left,
+        top: t.top,
+        angle: t.angle,
+        scaleX: t.scaleX,
+        scaleY: t.scaleY,
+        visible: t.visible,
       })),
     };
     localStorage.setItem("panelWorkspace", JSON.stringify(state));
@@ -413,9 +492,10 @@ function loadWorkspace() {
       canvas.setWidth(state.width);
       canvas.setHeight(state.height);
       canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-        originX: 'left', originY: 'top',
+        originX: "left",
+        originY: "top",
         width: state.width,
-        height: state.height
+        height: state.height,
       });
 
       state.polygons.forEach((p) => {
@@ -430,12 +510,26 @@ function loadWorkspace() {
 
       state.texts.forEach((t) => {
         const text = new fabric.Textbox(t.text, {
-          left: t.left, top: t.top, originX: "center", originY: "center",
-          angle: t.angle, scaleX: t.scaleX, scaleY: t.scaleY,
-          fontSize: fSize, fontFamily: '"M PLUS Rounded 1c", sans-serif',
-          fill: "#ffffff", fontWeight: "bold", stroke: "#000000", strokeWidth: tStroke, paintFirst: "stroke",
-          cornerColor: "#2563eb", cornerSize: 12, transparentCorners: false,
-          visible: t.visible, selectable: state.mode === "create", evented: state.mode === "create",
+          left: t.left,
+          top: t.top,
+          originX: "center",
+          originY: "center",
+          angle: t.angle,
+          scaleX: t.scaleX,
+          scaleY: t.scaleY,
+          fontSize: fSize,
+          fontFamily: '"M PLUS Rounded 1c", sans-serif',
+          fill: "#ffffff",
+          fontWeight: "bold",
+          stroke: "#000000",
+          strokeWidth: tStroke,
+          paintFirst: "stroke",
+          cornerColor: "#2563eb",
+          cornerSize: 12,
+          transparentCorners: false,
+          visible: t.visible,
+          selectable: state.mode === "create",
+          evented: state.mode === "create",
         });
         canvas.add(text);
       });
@@ -460,26 +554,68 @@ function loadWorkspace() {
   }
 }
 
-function downloadImage() {
+async function downloadImage() {
   if (!isImageLoaded) return;
   canvas.discardActiveObject();
   canvas.renderAll();
 
-  // 内部解像度が高画質で保たれているため、そのまま等倍(1)で出力
+  // 等倍で出力
   const dataURL = canvas.toDataURL({ format: "png", multiplier: 1 });
+  const fileName = `panel_${new Date().getTime()}.png`;
+
+  // Base64 (dataURL) を Blob (ファイルデータ) に変換する処理
+  function dataURLtoBlob(dataurl) {
+    let arr = dataurl.split(","),
+      mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]),
+      n = bstr.length,
+      u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  }
+
+  const blob = dataURLtoBlob(dataURL);
+  const file = new File([blob], fileName, { type: "image/png" });
+
+  // スマホの「共有メニュー（Web Share API）」が使えるかチェック
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: "パネル画像",
+      });
+      // シェアメニューが開いた（または完了した）らここで終了
+      return;
+    } catch (err) {
+      // ユーザーがシェアメニューを閉じた場合などは何もしない
+      console.log("シェアをキャンセルしました", err);
+      return;
+    }
+  }
+
+  // PCなど、共有メニューに非対応のブラウザの場合は従来の「ファイルダウンロード」を行う
   const a = document.createElement("a");
   a.href = dataURL;
-  a.download = `panel_${new Date().getTime()}.png`;
+  a.download = fileName;
   a.click();
 }
 
 function postToX() {
   const text = localStorage.getItem("xTemplate") || "";
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+    "_blank",
+  );
 }
 
-function openSettings() { document.getElementById("settingsModal").style.display = "flex"; }
-function closeSettings() { document.getElementById("settingsModal").style.display = "none"; }
+function openSettings() {
+  document.getElementById("settingsModal").style.display = "flex";
+}
+function closeSettings() {
+  document.getElementById("settingsModal").style.display = "none";
+}
 function saveSettings() {
   localStorage.setItem("xTemplate", document.getElementById("xText").value);
   closeSettings();
