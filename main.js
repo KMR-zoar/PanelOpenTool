@@ -371,7 +371,7 @@ function addText() {
     strokeWidth: tStroke,
     paintFirst: "stroke",
     cornerColor: "#2563eb",
-    cornerSize: 12,
+    cornerSize: 24,
     transparentCorners: false,
   });
   canvas.add(text);
@@ -525,7 +525,7 @@ function loadWorkspace() {
           strokeWidth: tStroke,
           paintFirst: "stroke",
           cornerColor: "#2563eb",
-          cornerSize: 12,
+          cornerSize: 24,
           transparentCorners: false,
           visible: t.visible,
           selectable: state.mode === "create",
