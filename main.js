@@ -172,8 +172,11 @@ function onMouseDown(o) {
   if (!isImageLoaded) return;
 
   if (currentMode === "create") {
-    if (canvas.getActiveObject() && canvas.getActiveObject().type === "textbox")
-      return;
+    // 1. すでにテキストを選択中（操作中）の場合は線を引かない
+    if (canvas.getActiveObject() && canvas.getActiveObject().type === "textbox") return;
+    
+    // 2. 選択されていないテキストを「これから操作しようとタッチした瞬間」も線を引かない
+    if (o.target && o.target.type === "textbox") return;
     isDrawing = true;
     const pointer = canvas.getPointer(o.e);
     startPoint = { x: pointer.x, y: pointer.y };
@@ -372,6 +375,7 @@ function addText() {
     paintFirst: "stroke",
     cornerColor: "#2563eb",
     cornerSize: 24,
+    padding: 15, 
     transparentCorners: false,
   });
   canvas.add(text);
@@ -526,6 +530,7 @@ function loadWorkspace() {
           paintFirst: "stroke",
           cornerColor: "#2563eb",
           cornerSize: 24,
+          padding: 15, 
           transparentCorners: false,
           visible: t.visible,
           selectable: state.mode === "create",
