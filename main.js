@@ -473,6 +473,8 @@ function saveWorkspace() {
         angle: t.angle,
         scaleX: t.scaleX,
         scaleY: t.scaleY,
+        width: t.width,
+        fontSize: t.fontSize,
         visible: t.visible,
       })),
     };
@@ -521,7 +523,8 @@ function loadWorkspace() {
           angle: t.angle,
           scaleX: t.scaleX,
           scaleY: t.scaleY,
-          fontSize: fSize,
+          width: t.width,
+          fontSize: t.fontSize || fSize,
           fontFamily: '"M PLUS Rounded 1c", sans-serif',
           fill: "#ffffff",
           fontWeight: "bold",
