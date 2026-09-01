@@ -14,6 +14,12 @@ const THEMES = [
   { fill: "rgba(255,255,255,1)", stroke: "#000000" },
 ];
 let currentThemeIndex = 0;
+let isTextEditing = false;
+// テキスト編集終了は同じmousedown内でonMouseDownより先に同期的に発生するため、
+// isTextEditingだけでは編集終了直後のタップを判定できない。次の1回だけ無視する。
+let suppressNextMouseDown = false;
+// 編集中のテキストがこの高さ(CSS px)未満まで縮むと、ヘッダーも隠してスペースを確保する
+const MIN_EDIT_TEXT_DISPLAY_HEIGHT = 40;
 
 window.onload = () => {
   canvas = new fabric.Canvas("mainCanvas", { selection: false });
@@ -27,7 +33,17 @@ window.onload = () => {
     document.getElementById("btnDeleteText").style.display = "none";
   });
 
+  canvas.on("text:editing:entered", () => {
+    isTextEditing = true;
+    updateEditingLayout();
+  });
+
   canvas.on("text:editing:exited", () => {
+    isTextEditing = false;
+    suppressNextMouseDown = true;
+    document.body.classList.remove("hide-footer", "hide-header", "is-editing-scroll");
+    document.getElementById("canvasWrapper").scrollTop = 0;
+    fitCanvasToScreen();
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
   });
@@ -35,8 +51,13 @@ window.onload = () => {
   canvas.on("object:modified", saveWorkspace);
   canvas.on("text:changed", saveWorkspace);
 
-  // 画面の向きが変わった時などに表示サイズをフィットし直す
-  window.addEventListener("resize", fitCanvasToScreen);
+  // 画面の向きが変わった時やキーボードの表示/非表示に合わせて表示サイズをフィットし直す
+  window.addEventListener("resize", updateAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateAppHeight);
+    window.visualViewport.addEventListener("scroll", updateAppHeight);
+  }
+  updateAppHeight();
 
   if (localStorage.getItem("xTemplate")) {
     document.getElementById("xText").value = localStorage.getItem("xTemplate");
@@ -45,13 +66,92 @@ window.onload = () => {
   loadWorkspace();
 };
 
+// === キーボード表示時の可視領域追従 ===
+function updateAppHeight() {
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", `${h}px`);
+
+  if (isTextEditing) {
+    updateEditingLayout();
+  } else {
+    fitCanvasToScreen();
+  }
+}
+
+// 文字編集中のレイアウト調整
+// 1. フッターを隠す 2. まだ文字が小さければヘッダーも隠す
+// 3. それでも高さが足りなければ「拡大」ではなく「幅基準フィット＋スクロール」に切り替える
+function updateEditingLayout() {
+  if (!isTextEditing) return;
+
+  document.body.classList.add("hide-footer");
+  document.body.classList.remove("hide-header", "is-editing-scroll");
+
+  const activeObj = canvas.getActiveObject();
+  if (!activeObj) return;
+
+  let ratio = fitCanvasToScreen();
+  if (!ratio) return;
+  let displayHeight = getEditTextLineHeight(activeObj) * ratio;
+
+  if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
+    document.body.classList.add("hide-header");
+    ratio = fitCanvasToScreen();
+    displayHeight = getEditTextLineHeight(activeObj) * ratio;
+  }
+
+  if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
+    // 縦横比を保ったままの縮小では幅まで狭くなってしまうため、
+    // 幅は画面いっぱいに使い、高さはスクロールで編集箇所を追う方式にする
+    document.body.classList.add("is-editing-scroll");
+    ratio = fitCanvasWidthOnly();
+    scrollToActiveText(activeObj, ratio);
+  }
+}
+
+// テキストボックス全体の高さではなく、1行あたりの見やすさ（フォントサイズ）を返す
+// 複数行テキストは行数分だけ全体の高さが伸びるため、それを基準にすると誤判定する
+function getEditTextLineHeight(obj) {
+  return (obj.fontSize || 0) * (obj.scaleY || 1);
+}
+
+// 高さは無視し、幅を基準にキャンバスをフィットさせる
+function fitCanvasWidthOnly() {
+  if (!isImageLoaded) return null;
+  const wrapper = document.getElementById("canvasWrapper");
+  const rect = wrapper.getBoundingClientRect();
+  const maxWidth = Math.max(0, rect.width - 20);
+
+  const logW = canvas.getWidth();
+  const logH = canvas.getHeight();
+  const ratio = maxWidth / logW;
+  const cssW = logW * ratio;
+  const cssH = logH * ratio;
+
+  canvas.setDimensions(
+    { width: cssW + "px", height: cssH + "px" },
+    { cssOnly: true },
+  );
+  canvas.renderAll();
+  return ratio;
+}
+
+// 編集中のテキストが画面中央に来るようキャンバスラッパーを縦スクロールさせる
+function scrollToActiveText(activeObj, ratio) {
+  if (!ratio) return;
+  const wrapper = document.getElementById("canvasWrapper");
+  const objRect = activeObj.getBoundingRect(true, true);
+  const objCenterYCss = (objRect.top + objRect.height / 2) * ratio + 10; // +10: wrapperのpadding分
+  wrapper.scrollTop = Math.max(0, objCenterYCss - wrapper.clientHeight / 2);
+}
+
 // === 内部解像度と見た目の分離処理 ===
 function fitCanvasToScreen() {
   if (!isImageLoaded) return;
   const wrapper = document.getElementById("canvasWrapper");
   const rect = wrapper.getBoundingClientRect();
-  const maxWidth = rect.width - 20;
-  const maxHeight = rect.height - 20;
+  const maxWidth = Math.max(0, rect.width - 20);
+  const maxHeight = Math.max(0, rect.height - 20);
 
   // 内部の論理解像度（1500px等）を取得
   const logW = canvas.getWidth();
@@ -72,6 +172,7 @@ function fitCanvasToScreen() {
   );
 
   canvas.renderAll();
+  return ratio;
 }
 
 function checkSelection(e) {
@@ -170,6 +271,13 @@ function resetPanels() {
 
 function onMouseDown(o) {
   if (!isImageLoaded) return;
+
+  // テキスト編集を終了させたのと同じタップ（キーボードを閉じるための画像タップ等）では
+  // 線描画や開閉操作を行わない
+  if (suppressNextMouseDown) {
+    suppressNextMouseDown = false;
+    return;
+  }
 
   if (currentMode === "create") {
     // 1. すでにテキストを選択中（操作中）の場合は線を引かない

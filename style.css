@@ -21,12 +21,35 @@ body {
   flex-direction: column;
   /* 100vh を 100dvh に変更 (スマホの動的バーに対応) */
   height: 100dvh;
+  /* ソフトウェアキーボード表示時は visualViewport に合わせて JS から上書きする */
+  height: var(--app-height, 100dvh);
   overflow: hidden;
   --current-theme: var(--primary-create);
 }
 
 body.mode-open {
   --current-theme: var(--primary-open);
+}
+
+/* 文字編集中: キーボードに隠れないようフッターを一時的に非表示 */
+body.hide-footer footer {
+  display: none;
+}
+
+/* 文字編集中でもなお表示スペースが足りない場合: ヘッダーも一時的に非表示 */
+body.hide-header header {
+  display: none;
+}
+
+body.hide-header .toolbar {
+  margin-top: 0;
+}
+
+/* 高さが極端に狭い場合: 幅基準フィットにして縦スクロールで編集箇所を見せる */
+body.is-editing-scroll .canvas-wrapper {
+  align-items: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ヘッダー＆タブ */
