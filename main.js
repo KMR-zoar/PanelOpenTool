@@ -88,12 +88,12 @@ function updateEditingLayout() {
 
   let ratio = fitCanvasToScreen();
   if (!ratio) return;
-  let displayHeight = activeObj.getScaledHeight() * ratio;
+  let displayHeight = getEditTextLineHeight(activeObj) * ratio;
 
   if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
     document.body.classList.add("hide-header");
     ratio = fitCanvasToScreen();
-    displayHeight = activeObj.getScaledHeight() * ratio;
+    displayHeight = getEditTextLineHeight(activeObj) * ratio;
   }
 
   if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
@@ -103,6 +103,12 @@ function updateEditingLayout() {
     ratio = fitCanvasWidthOnly();
     scrollToActiveText(activeObj, ratio);
   }
+}
+
+// テキストボックス全体の高さではなく、1行あたりの見やすさ（フォントサイズ）を返す
+// 複数行テキストは行数分だけ全体の高さが伸びるため、それを基準にすると誤判定する
+function getEditTextLineHeight(obj) {
+  return (obj.fontSize || 0) * (obj.scaleY || 1);
 }
 
 // 高さは無視し、幅を基準にキャンバスをフィットさせる
