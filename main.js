@@ -14,6 +14,9 @@ const THEMES = [
   { fill: "rgba(255,255,255,1)", stroke: "#000000" },
 ];
 let currentThemeIndex = 0;
+let isTextEditing = false;
+// 編集中のテキストがこの高さ(CSS px)未満まで縮むと、ヘッダーも隠してスペースを確保する
+const MIN_EDIT_TEXT_DISPLAY_HEIGHT = 40;
 
 window.onload = () => {
   canvas = new fabric.Canvas("mainCanvas", { selection: false });
@@ -27,7 +30,15 @@ window.onload = () => {
     document.getElementById("btnDeleteText").style.display = "none";
   });
 
+  canvas.on("text:editing:entered", () => {
+    isTextEditing = true;
+    updateEditingLayout();
+  });
+
   canvas.on("text:editing:exited", () => {
+    isTextEditing = false;
+    document.body.classList.remove("hide-footer", "hide-header");
+    fitCanvasToScreen();
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
   });
@@ -35,8 +46,13 @@ window.onload = () => {
   canvas.on("object:modified", saveWorkspace);
   canvas.on("text:changed", saveWorkspace);
 
-  // 画面の向きが変わった時などに表示サイズをフィットし直す
-  window.addEventListener("resize", fitCanvasToScreen);
+  // 画面の向きが変わった時やキーボードの表示/非表示に合わせて表示サイズをフィットし直す
+  window.addEventListener("resize", updateAppHeight);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", updateAppHeight);
+    window.visualViewport.addEventListener("scroll", updateAppHeight);
+  }
+  updateAppHeight();
 
   if (localStorage.getItem("xTemplate")) {
     document.getElementById("xText").value = localStorage.getItem("xTemplate");
@@ -45,13 +61,43 @@ window.onload = () => {
   loadWorkspace();
 };
 
+// === キーボード表示時の可視領域追従 ===
+function updateAppHeight() {
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", `${h}px`);
+
+  if (isTextEditing) {
+    updateEditingLayout();
+  } else {
+    fitCanvasToScreen();
+  }
+}
+
+// 文字編集中のレイアウト調整（フッター非表示 → まだ狭ければヘッダーも非表示）
+function updateEditingLayout() {
+  if (!isTextEditing) return;
+
+  document.body.classList.add("hide-footer");
+  document.body.classList.remove("hide-header");
+  let ratio = fitCanvasToScreen();
+
+  const activeObj = canvas.getActiveObject();
+  if (activeObj && ratio) {
+    const displayHeight = activeObj.getScaledHeight() * ratio;
+    if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
+      document.body.classList.add("hide-header");
+      fitCanvasToScreen();
+    }
+  }
+}
+
 // === 内部解像度と見た目の分離処理 ===
 function fitCanvasToScreen() {
   if (!isImageLoaded) return;
   const wrapper = document.getElementById("canvasWrapper");
   const rect = wrapper.getBoundingClientRect();
-  const maxWidth = rect.width - 20;
-  const maxHeight = rect.height - 20;
+  const maxWidth = Math.max(0, rect.width - 20);
+  const maxHeight = Math.max(0, rect.height - 20);
 
   // 内部の論理解像度（1500px等）を取得
   const logW = canvas.getWidth();
@@ -72,6 +118,7 @@ function fitCanvasToScreen() {
   );
 
   canvas.renderAll();
+  return ratio;
 }
 
 function checkSelection(e) {
