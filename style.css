@@ -45,6 +45,13 @@ body.hide-header .toolbar {
   margin-top: 0;
 }
 
+/* 高さが極端に狭い場合: 幅基準フィットにして縦スクロールで編集箇所を見せる */
+body.is-editing-scroll .canvas-wrapper {
+  align-items: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ヘッダー＆タブ */
 header {
   background: #fff;

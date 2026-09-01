@@ -17,9 +17,6 @@ let currentThemeIndex = 0;
 let isTextEditing = false;
 // 編集中のテキストがこの高さ(CSS px)未満まで縮むと、ヘッダーも隠してスペースを確保する
 const MIN_EDIT_TEXT_DISPLAY_HEIGHT = 40;
-// 編集中に確保したいテキストの表示高さ(CSS px)。足りなければテキスト付近を拡大する
-const EDIT_ZOOM_TARGET_HEIGHT = 70;
-const MAX_EDIT_ZOOM = 6;
 
 window.onload = () => {
   canvas = new fabric.Canvas("mainCanvas", { selection: false });
@@ -40,8 +37,8 @@ window.onload = () => {
 
   canvas.on("text:editing:exited", () => {
     isTextEditing = false;
-    document.body.classList.remove("hide-footer", "hide-header");
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    document.body.classList.remove("hide-footer", "hide-header", "is-editing-scroll");
+    document.getElementById("canvasWrapper").scrollTop = 0;
     fitCanvasToScreen();
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
@@ -77,47 +74,65 @@ function updateAppHeight() {
   }
 }
 
-// 文字編集中のレイアウト調整（フッター非表示 → まだ狭ければヘッダーも非表示 → それでも狭ければ拡大表示）
+// 文字編集中のレイアウト調整
+// 1. フッターを隠す 2. まだ文字が小さければヘッダーも隠す
+// 3. それでも高さが足りなければ「拡大」ではなく「幅基準フィット＋スクロール」に切り替える
 function updateEditingLayout() {
   if (!isTextEditing) return;
 
   document.body.classList.add("hide-footer");
-  document.body.classList.remove("hide-header");
-  let ratio = fitCanvasToScreen();
+  document.body.classList.remove("hide-header", "is-editing-scroll");
 
   const activeObj = canvas.getActiveObject();
-  if (!activeObj || !ratio) return;
+  if (!activeObj) return;
 
+  let ratio = fitCanvasToScreen();
+  if (!ratio) return;
   let displayHeight = activeObj.getScaledHeight() * ratio;
+
   if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
     document.body.classList.add("hide-header");
     ratio = fitCanvasToScreen();
+    displayHeight = activeObj.getScaledHeight() * ratio;
   }
 
-  applyEditZoom(activeObj, ratio);
+  if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
+    // 縦横比を保ったままの縮小では幅まで狭くなってしまうため、
+    // 幅は画面いっぱいに使い、高さはスクロールで編集箇所を追う方式にする
+    document.body.classList.add("is-editing-scroll");
+    ratio = fitCanvasWidthOnly();
+    scrollToActiveText(activeObj, ratio);
+  }
 }
 
-// 画像全体を縮小する代わりに、編集中のテキスト付近だけを拡大して見やすくする
-function applyEditZoom(activeObj, ratio) {
-  const objHeight = activeObj.getScaledHeight();
-  let zoom = 1;
-  if (objHeight > 0) {
-    zoom = Math.max(1, Math.min(MAX_EDIT_ZOOM, EDIT_ZOOM_TARGET_HEIGHT / (objHeight * ratio)));
-  }
+// 高さは無視し、幅を基準にキャンバスをフィットさせる
+function fitCanvasWidthOnly() {
+  if (!isImageLoaded) return null;
+  const wrapper = document.getElementById("canvasWrapper");
+  const rect = wrapper.getBoundingClientRect();
+  const maxWidth = Math.max(0, rect.width - 20);
 
-  if (zoom <= 1) {
-    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-  } else {
-    const center = activeObj.getCenterPoint();
-    const vpCenterX = canvas.getWidth() / 2;
-    const vpCenterY = canvas.getHeight() / 2;
-    canvas.setViewportTransform([
-      zoom, 0, 0, zoom,
-      vpCenterX - center.x * zoom,
-      vpCenterY - center.y * zoom,
-    ]);
-  }
+  const logW = canvas.getWidth();
+  const logH = canvas.getHeight();
+  const ratio = maxWidth / logW;
+  const cssW = logW * ratio;
+  const cssH = logH * ratio;
+
+  canvas.setDimensions(
+    { width: cssW + "px", height: cssH + "px" },
+    { cssOnly: true },
+  );
   canvas.renderAll();
+  return ratio;
+}
+
+// 編集中のテキストが画面中央に来るようキャンバスラッパーを縦スクロールさせる
+function scrollToActiveText(activeObj, ratio) {
+  if (!ratio) return;
+  const wrapper = document.getElementById("canvasWrapper");
+  const objRect = activeObj.getBoundingRect(true, true);
+  const objCenterYCss = (objRect.top + objRect.height / 2) * ratio + 10; // +10: wrapperのpadding分
+  wrapper.scrollTop = Math.max(0, objCenterYCss - wrapper.clientHeight / 2);
 }
 
 // === 内部解像度と見た目の分離処理 ===
