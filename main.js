@@ -17,6 +17,9 @@ let currentThemeIndex = 0;
 let isTextEditing = false;
 // 編集中のテキストがこの高さ(CSS px)未満まで縮むと、ヘッダーも隠してスペースを確保する
 const MIN_EDIT_TEXT_DISPLAY_HEIGHT = 40;
+// 編集中に確保したいテキストの表示高さ(CSS px)。足りなければテキスト付近を拡大する
+const EDIT_ZOOM_TARGET_HEIGHT = 70;
+const MAX_EDIT_ZOOM = 6;
 
 window.onload = () => {
   canvas = new fabric.Canvas("mainCanvas", { selection: false });
@@ -38,6 +41,7 @@ window.onload = () => {
   canvas.on("text:editing:exited", () => {
     isTextEditing = false;
     document.body.classList.remove("hide-footer", "hide-header");
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
     fitCanvasToScreen();
     window.scrollTo(0, 0);
     document.body.scrollTop = 0;
@@ -73,7 +77,7 @@ function updateAppHeight() {
   }
 }
 
-// 文字編集中のレイアウト調整（フッター非表示 → まだ狭ければヘッダーも非表示）
+// 文字編集中のレイアウト調整（フッター非表示 → まだ狭ければヘッダーも非表示 → それでも狭ければ拡大表示）
 function updateEditingLayout() {
   if (!isTextEditing) return;
 
@@ -82,13 +86,38 @@ function updateEditingLayout() {
   let ratio = fitCanvasToScreen();
 
   const activeObj = canvas.getActiveObject();
-  if (activeObj && ratio) {
-    const displayHeight = activeObj.getScaledHeight() * ratio;
-    if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
-      document.body.classList.add("hide-header");
-      fitCanvasToScreen();
-    }
+  if (!activeObj || !ratio) return;
+
+  let displayHeight = activeObj.getScaledHeight() * ratio;
+  if (displayHeight < MIN_EDIT_TEXT_DISPLAY_HEIGHT) {
+    document.body.classList.add("hide-header");
+    ratio = fitCanvasToScreen();
   }
+
+  applyEditZoom(activeObj, ratio);
+}
+
+// 画像全体を縮小する代わりに、編集中のテキスト付近だけを拡大して見やすくする
+function applyEditZoom(activeObj, ratio) {
+  const objHeight = activeObj.getScaledHeight();
+  let zoom = 1;
+  if (objHeight > 0) {
+    zoom = Math.max(1, Math.min(MAX_EDIT_ZOOM, EDIT_ZOOM_TARGET_HEIGHT / (objHeight * ratio)));
+  }
+
+  if (zoom <= 1) {
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+  } else {
+    const center = activeObj.getCenterPoint();
+    const vpCenterX = canvas.getWidth() / 2;
+    const vpCenterY = canvas.getHeight() / 2;
+    canvas.setViewportTransform([
+      zoom, 0, 0, zoom,
+      vpCenterX - center.x * zoom,
+      vpCenterY - center.y * zoom,
+    ]);
+  }
+  canvas.renderAll();
 }
 
 // === 内部解像度と見た目の分離処理 ===
