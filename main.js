@@ -15,6 +15,9 @@ const THEMES = [
 ];
 let currentThemeIndex = 0;
 let isTextEditing = false;
+// テキスト編集終了は同じmousedown内でonMouseDownより先に同期的に発生するため、
+// isTextEditingだけでは編集終了直後のタップを判定できない。次の1回だけ無視する。
+let suppressNextMouseDown = false;
 // 編集中のテキストがこの高さ(CSS px)未満まで縮むと、ヘッダーも隠してスペースを確保する
 const MIN_EDIT_TEXT_DISPLAY_HEIGHT = 40;
 
@@ -37,6 +40,7 @@ window.onload = () => {
 
   canvas.on("text:editing:exited", () => {
     isTextEditing = false;
+    suppressNextMouseDown = true;
     document.body.classList.remove("hide-footer", "hide-header", "is-editing-scroll");
     document.getElementById("canvasWrapper").scrollTop = 0;
     fitCanvasToScreen();
@@ -267,6 +271,13 @@ function resetPanels() {
 
 function onMouseDown(o) {
   if (!isImageLoaded) return;
+
+  // テキスト編集を終了させたのと同じタップ（キーボードを閉じるための画像タップ等）では
+  // 線描画や開閉操作を行わない
+  if (suppressNextMouseDown) {
+    suppressNextMouseDown = false;
+    return;
+  }
 
   if (currentMode === "create") {
     // 1. すでにテキストを選択中（操作中）の場合は線を引かない
